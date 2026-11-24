@@ -49,6 +49,26 @@ describe('rooms', () => {
     expect(res.status).toBe(409);
   });
 
+  it('lists live rooms for spectators', async () => {
+    const res = await request(app).get('/api/rooms');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    const mine = res.body.find((r) => r.code === code);
+    expect(mine).toBeTruthy();
+    expect(mine.players.white.name).toBe('Alice');
+    expect(mine.players.black.name).toBe('Bob');
+    expect(mine.status).toBe('active');
+    expect(mine.moves).toBe(0);
+  });
+
+  it('lets a spectator view state without a token', async () => {
+    const res = await request(app).get(`/api/rooms/${code}`);
+    expect(res.status).toBe(200);
+    expect(res.body.you).toBeNull();
+    expect(res.body.legalMoves).toHaveLength(0);
+    expect(res.body.fen).toContain('rnbqkbnr');
+  });
+
   it('returns 404 for unknown room', async () => {
     const res = await request(app).get('/api/rooms/ZZZZZZ');
     expect(res.status).toBe(404);

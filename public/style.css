@@ -108,6 +108,49 @@ body {
 
 .error { color: #e07070; margin-top: 14px; font-size: 13px; min-height: 18px; }
 
+/* ---------- Live games ---------- */
+.live-section {
+  margin-top: 28px;
+  border-top: 1px solid #3d3a33;
+  padding-top: 20px;
+  text-align: left;
+}
+.live-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.live-header h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-dim); }
+.live-list { list-style: none; display: flex; flex-direction: column; gap: 8px; max-height: 220px; overflow-y: auto; }
+.live-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-elevated);
+  border: 1px solid #454138;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+}
+.live-item .names { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.live-item .names .vs { color: var(--text-dim); margin: 0 4px; }
+.live-item .names .waiting { color: var(--text-dim); font-style: italic; }
+.live-item .meta { color: var(--text-dim); font-size: 12px; flex-shrink: 0; }
+.live-item .live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #e05252;
+  flex-shrink: 0;
+  animation: pulse 1.6s infinite;
+}
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+.live-empty { color: var(--text-dim); font-size: 13px; text-align: center; padding: 8px 0 4px; }
+
+.spectate-badge {
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #4a3f6b;
+  color: #cfc4f0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
 /* ---------- Top bar ---------- */
 .topbar {
   display: flex;

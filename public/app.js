@@ -28,9 +28,14 @@ const els = {
   drawBtn: document.getElementById('drawBtn'),
   resignBtn: document.getElementById('resignBtn'),
   drawBanner: document.getElementById('drawBanner'),
+  liveList: document.getElementById('liveList'),
+  liveEmpty: document.getElementById('liveEmpty'),
+  refreshLiveBtn: document.getElementById('refreshLiveBtn'),
+  leaveBtn: document.getElementById('leaveBtn'),
+  spectateBadge: document.getElementById('spectateBadge'),
 };
 
-const session = loadSession();
+const session = loadSession() || {};
 let state = null;          // last server state
 let selected = null;       // selected square name e.g. 'e2'
 let legalByFrom = new Map();
@@ -88,15 +93,35 @@ els.joinCode.addEventListener('keydown', (e) => {
 });
 
 function enterGame(s) {
-  saveSession(s);
-  session.code = s.code; session.token = s.token; session.color = s.color; session.name = s.name;
+  session.code = s.code;
+  session.token = s.token || null;
+  session.color = s.color || null;
+  session.name = s.name || null;
+  session.spectator = !!s.spectator;
+  saveSession(session);
   els.lobby.classList.add('hidden');
   els.game.classList.remove('hidden');
   els.roomCode.textContent = s.code;
+  els.spectateBadge.classList.toggle('hidden', !session.spectator);
   buildBoard();
   refresh();
   if (pollTimer) clearInterval(pollTimer);
   pollTimer = setInterval(refresh, 1500);
+}
+
+function watchRoom(code) {
+  enterGame({ code: code.toUpperCase(), spectator: true });
+}
+
+function leaveGame() {
+  saveSession(null);
+  session.code = null;
+  state = null;
+  selected = null;
+  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  els.game.classList.add('hidden');
+  els.lobby.classList.remove('hidden');
+  loadLive();
 }
 
 /* ---------------- Board ---------------- */
@@ -352,7 +377,8 @@ function onDragUp(e) {
 async function refresh() {
   if (!session.code) return;
   try {
-    const fresh = await api(`/api/rooms/${session.code}?token=${session.token}`);
+    const qs = session.token ? `?token=${session.token}` : '';
+    const fresh = await api(`/api/rooms/${session.code}${qs}`);
     const changed = JSON.stringify(fresh.history) !== JSON.stringify(state?.history);
     state = fresh;
     legalByFrom = new Map();
@@ -384,6 +410,10 @@ function renderAll() {
 function renderStatus() {
   const pill = els.statusPill;
   pill.classList.remove('your-turn');
+  if (session.spectator) {
+    pill.textContent = 'Spectating';
+    return;
+  }
   if (state.status === 'waiting') {
     pill.textContent = 'Waiting for opponent…';
   } else if (state.status === 'finished') {
@@ -438,11 +468,13 @@ function renderSidebar() {
   }
   els.moveList.scrollTop = els.moveList.scrollHeight;
 
-  els.drawBtn.disabled = state.status !== 'active';
-  els.resignBtn.disabled = state.status !== 'active';
+  const spectator = session.spectator || !state.you;
+  els.drawBtn.disabled = spectator || state.status !== 'active';
+  els.resignBtn.disabled = spectator || state.status !== 'active';
+  els.resignBtn.style.display = spectator ? 'none' : '';
   els.drawBtn.textContent = state.drawOffer && state.drawOffer.color !== state.you?.color
     ? 'Accept draw' : state.drawOffer?.color === state.you?.color ? 'Withdraw offer' : 'Offer draw';
-  els.rematchBtn.style.display = state.status === 'finished' ? '' : 'none';
+  els.rematchBtn.style.display = !spectator && state.status === 'finished' ? '' : 'none';
 }
 
 function playerHtml(p, colorChar, active) {
@@ -469,18 +501,18 @@ function escapeHtml(s) { return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<
 function renderDrawBanner() {
   const el = els.drawBanner;
   const offer = state.drawOffer;
-  if (state.status !== 'active' || !offer) { el.classList.add('hidden'); return; }
+  if (session.spectator || !state.you || state.status !== 'active' || !offer) { el.classList.add('hidden'); return; }
   el.classList.remove('hidden');
   const mine = offer.color === state.you?.color;
   if (mine) {
-    el.innerHTML = `<div>${escapeHtml(offer.name)} offered a draw.</div>
-      <div class="row"><button class="btn btn-primary" id="acceptDrawBtn">Accept</button>
-      <button class="btn" id="declineDrawBtn">Decline</button></div>`;
-  } else {
-    el.innerHTML = `<div>Draw offered to you.</div>
-      <div class="row"><button class="btn btn-primary" id="acceptDrawBtn">Accept</button>
-      <button class="btn" id="declineDrawBtn">Decline</button></div>`;
+    el.innerHTML = `<div>You offered a draw — waiting for response.</div>
+      <div class="row"><button class="btn" id="withdrawDrawBtn">Withdraw</button></div>`;
+    document.getElementById('withdrawDrawBtn').onclick = () => api(`/api/rooms/${session.code}/draw-offer`, { method: 'POST', body: { token: session.token } }).then(refresh).catch((e) => alert(e.message));
+    return;
   }
+  el.innerHTML = `<div>${escapeHtml(state.players[offer.color]?.name ?? 'Opponent')} offered a draw.</div>
+    <div class="row"><button class="btn btn-primary" id="acceptDrawBtn">Accept</button>
+    <button class="btn" id="declineDrawBtn">Decline</button></div>`;
   document.getElementById('acceptDrawBtn').onclick = () => drawAction('draw-accept');
   document.getElementById('declineDrawBtn').onclick = () => drawAction('draw-decline');
 }
@@ -540,14 +572,46 @@ async function drawAction(kind) {
   } catch (e) { alert(e.message); }
 }
 
+/* ---------------- Live games ---------------- */
+
+async function loadLive() {
+  try {
+    const rooms = await api('/api/rooms');
+    els.liveEmpty.style.display = rooms.length ? 'none' : '';
+    els.liveList.innerHTML = '';
+    for (const r of rooms) {
+      const li = document.createElement('li');
+      li.className = 'live-item';
+      const w = r.players.white?.name ?? '…';
+      const b = r.players.black?.name ?? '<span class="waiting">waiting…</span>';
+      const meta = r.status === 'waiting' ? 'waiting' : `${r.moves} moves · ${r.turn === 'w' ? 'White' : 'Black'} to move`;
+      li.innerHTML = `
+        <span class="live-dot"></span>
+        <span class="names">${escapeHtml(w)}<span class="vs">vs</span>${b}</span>
+        <span class="meta">${meta}</span>
+        <button class="btn btn-small btn-watch">Watch</button>`;
+      li.querySelector('.btn-watch').addEventListener('click', () => watchRoom(r.code));
+      els.liveList.appendChild(li);
+    }
+  } catch {
+    // server unreachable — leave list as is
+  }
+}
+
+els.refreshLiveBtn.addEventListener('click', loadLive);
+els.leaveBtn.addEventListener('click', leaveGame);
+setInterval(() => { if (els.game.classList.contains('hidden')) loadLive(); }, 3000);
+loadLive();
+
 /* ---------------- Boot ---------------- */
 
 buildBoard();
-if (session?.code && session?.token) {
+if (session.code) {
   els.lobby.classList.add('hidden');
   els.game.classList.remove('hidden');
   els.playerName.value = session.name || '';
   els.roomCode.textContent = session.code;
+  els.spectateBadge.classList.toggle('hidden', !session.spectator);
   refresh();
   pollTimer = setInterval(refresh, 1500);
 } else {

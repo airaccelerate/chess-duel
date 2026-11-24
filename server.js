@@ -116,6 +116,30 @@ app.post('/api/rooms', (req, res) => {
   res.json({ code, color: 'white', token: room.players.white.token });
 });
 
+app.get('/api/rooms', (req, res) => {
+  const now = Date.now();
+  const list = [];
+  for (const room of rooms.values()) {
+    if (now - room.createdAt > ROOM_TTL_MS) {
+      rooms.delete(room.code);
+      continue;
+    }
+    list.push({
+      code: room.code,
+      status: room.status,
+      players: {
+        white: room.players.white ? { name: room.players.white.name } : null,
+        black: room.players.black ? { name: room.players.black.name } : null,
+      },
+      moves: room.chess.history().length,
+      turn: room.chess.turn(),
+      createdAt: room.createdAt,
+    });
+  }
+  list.sort((a, b) => b.createdAt - a.createdAt);
+  res.json(list.slice(0, 50));
+});
+
 app.post('/api/rooms/:code/join', (req, res) => {
   const room = getRoom(req, res);
   if (!room) return;

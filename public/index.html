@@ -28,6 +28,15 @@
           </div>
         </div>
         <p id="lobbyError" class="error"></p>
+
+        <div class="live-section">
+          <div class="live-header">
+            <h2>Live games</h2>
+            <button id="refreshLiveBtn" class="btn btn-small" title="Refresh">↻</button>
+          </div>
+          <ul id="liveList" class="live-list"></ul>
+          <p id="liveEmpty" class="live-empty">No games in progress. Create one!</p>
+        </div>
       </div>
     </section>
 
@@ -41,6 +50,8 @@
           <button id="copyBtn" class="btn btn-small" title="Copy room code">Copy</button>
         </div>
         <div id="statusPill" class="status-pill">Waiting…</div>
+        <span id="spectateBadge" class="spectate-badge hidden">SPECTATING</span>
+        <button id="leaveBtn" class="btn btn-small">Leave</button>
       </header>
 
       <main class="game-layout">
