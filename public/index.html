@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Duel — Play Chess Online</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Landing screen -->
+    <section id="lobby" class="screen">
+      <div class="lobby-card">
+        <div class="logo">
+          <img src="/pieces/wQ.svg" alt="" class="logo-piece" />
+          <h1>Chess<span>Duel</span></h1>
+        </div>
+        <p class="tagline">Two players. One board. No mercy.</p>
+        <label class="field">
+          <span>Your name</span>
+          <input id="playerName" maxlength="24" placeholder="Guest" autocomplete="off" />
+        </label>
+        <div class="lobby-actions">
+          <button id="createBtn" class="btn btn-primary">Create room</button>
+          <div class="join-row">
+            <input id="joinCode" maxlength="6" placeholder="ROOM CODE" autocomplete="off" />
+            <button id="joinBtn" class="btn">Join</button>
+          </div>
+        </div>
+        <p id="lobbyError" class="error"></p>
+      </div>
+    </section>
+
+    <!-- Game screen -->
+    <section id="game" class="screen hidden">
+      <header class="topbar">
+        <div class="brand">Chess<span>Duel</span></div>
+        <div class="room-info">
+          <span>Room</span>
+          <code id="roomCode">------</code>
+          <button id="copyBtn" class="btn btn-small" title="Copy room code">Copy</button>
+        </div>
+        <div id="statusPill" class="status-pill">Waiting…</div>
+      </header>
+
+      <main class="game-layout">
+        <div class="board-wrap">
+          <div id="board" class="board"></div>
+          <div id="promoModal" class="modal hidden">
+            <div class="modal-card">
+              <h3>Promote to</h3>
+              <div id="promoChoices" class="promo-choices"></div>
+            </div>
+          </div>
+          <div id="resultOverlay" class="result-overlay hidden">
+            <div class="result-card">
+              <h2 id="resultTitle"></h2>
+              <p id="resultSub"></p>
+              <button id="rematchBtn" class="btn btn-primary">Rematch</button>
+            </div>
+          </div>
+        </div>
+
+        <aside class="sidebar">
+          <div class="players">
+            <div id="playerTop" class="player"></div>
+            <div id="capturedTop" class="captured"></div>
+            <div id="playerBottom" class="player"></div>
+            <div id="capturedBottom" class="captured"></div>
+          </div>
+          <div class="history-wrap">
+            <h3>Moves</h3>
+            <ol id="moveList" class="move-list"></ol>
+          </div>
+          <div class="actions">
+            <button id="drawBtn" class="btn">Offer draw</button>
+            <button id="resignBtn" class="btn btn-danger">Resign</button>
+          </div>
+          <div id="drawBanner" class="draw-banner hidden"></div>
+        </aside>
+      </main>
+    </section>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
